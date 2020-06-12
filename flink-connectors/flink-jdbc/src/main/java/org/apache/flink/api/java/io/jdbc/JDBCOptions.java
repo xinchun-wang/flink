@@ -36,15 +36,17 @@ public class JDBCOptions {
 	private String driverName;
 	private String username;
 	private String password;
+	private boolean sharding;
 	private JDBCDialect dialect;
 
 	private JDBCOptions(String dbURL, String tableName, String driverName, String username,
-			String password, JDBCDialect dialect) {
+			String password, boolean sharding, JDBCDialect dialect) {
 		this.dbURL = dbURL;
 		this.tableName = tableName;
 		this.driverName = driverName;
 		this.username = username;
 		this.password = password;
+		this.sharding = sharding;
 		this.dialect = dialect;
 	}
 
@@ -68,6 +70,10 @@ public class JDBCOptions {
 		return password;
 	}
 
+	public boolean isSharding() {
+		return sharding;
+	}
+
 	public JDBCDialect getDialect() {
 		return dialect;
 	}
@@ -85,6 +91,7 @@ public class JDBCOptions {
 				Objects.equals(driverName, options.driverName) &&
 				Objects.equals(username, options.username) &&
 				Objects.equals(password, options.password) &&
+				Objects.equals(sharding, options.sharding) &&
 				Objects.equals(dialect.getClass().getName(), options.dialect.getClass().getName());
 		} else {
 			return false;
@@ -100,6 +107,7 @@ public class JDBCOptions {
 		private String driverName;
 		private String username;
 		private String password;
+		private boolean sharding;
 		private JDBCDialect dialect;
 
 		/**
@@ -144,6 +152,14 @@ public class JDBCOptions {
 		}
 
 		/**
+		 * optional, jdbc is sharding or not
+		 */
+		public Builder setSharding(boolean sharding){
+			this.sharding = sharding;
+			return this;
+		}
+
+		/**
 		 * optional, Handle the SQL dialect of jdbc driver. If not set, it will be infer by
 		 * {@link JDBCDialects#get} from DB url.
 		 */
@@ -168,7 +184,7 @@ public class JDBCOptions {
 				});
 			}
 
-			return new JDBCOptions(dbURL, tableName, driverName, username, password, dialect);
+			return new JDBCOptions(dbURL, tableName, driverName, username, password, sharding, dialect);
 		}
 	}
 }

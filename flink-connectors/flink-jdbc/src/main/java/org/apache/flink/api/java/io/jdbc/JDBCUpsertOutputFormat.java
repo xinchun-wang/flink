@@ -54,6 +54,7 @@ public class JDBCUpsertOutputFormat extends AbstractJDBCOutputFormat<Tuple2<Bool
 	private final String[] fieldNames;
 	private final String[] keyFields;
 	private final int[] fieldTypes;
+	private final boolean sharding;
 
 	private final int flushMaxSize;
 	private final long flushIntervalMills;
@@ -85,6 +86,7 @@ public class JDBCUpsertOutputFormat extends AbstractJDBCOutputFormat<Tuple2<Bool
 		this.flushMaxSize = flushMaxSize;
 		this.flushIntervalMills = flushIntervalMills;
 		this.maxRetryTimes = maxRetryTimes;
+		this.sharding = options.isSharding();
 	}
 
 	/**
@@ -97,7 +99,11 @@ public class JDBCUpsertOutputFormat extends AbstractJDBCOutputFormat<Tuple2<Bool
 	@Override
 	public void open(int taskNumber, int numTasks) throws IOException {
 		try {
+			if(sharding) {
+				this.dbURL = getTaskConnUrl(dbURL, taskNumber, numTasks);
+			}
 			establishConnection();
+
 			objectReuse = getRuntimeContext().getExecutionConfig().isObjectReuseEnabled();
 			if (keyFields == null || keyFields.length == 0) {
 				String insertSQL = dialect.getInsertIntoStatement(tableName, fieldNames);
@@ -205,6 +211,29 @@ public class JDBCUpsertOutputFormat extends AbstractJDBCOutputFormat<Tuple2<Bool
 		}
 
 		closeDbConnection();
+	}
+
+	protected String getTaskConnUrl(String dbURL, int taskNumber, int numTasks){
+		String[] urls = dbURL.split(";");
+		int shardNum  = urls.length;
+		String taskConnUrl;
+
+		//each task mapping the singe connection url
+		if(shardNum == numTasks){
+			taskConnUrl = urls[taskNumber];
+		}
+		//multi task mapping the same connection url
+		else if(shardNum < numTasks){
+			int shardIndex = taskNumber % shardNum;
+			taskConnUrl = urls[shardIndex];
+		}
+		else{
+			String error = String.format("There are %s shard, but only have %s task. Pleas increase the jdbc sink task number!",
+				shardNum, numTasks);
+			throw new RuntimeException(error);
+		}
+		LOG.info("taskNumber {} using connection db url is {}", taskNumber, taskConnUrl);
+		return taskConnUrl;
 	}
 
 	public static Builder builder() {

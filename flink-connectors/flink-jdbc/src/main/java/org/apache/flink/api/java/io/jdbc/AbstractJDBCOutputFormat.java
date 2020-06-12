@@ -47,7 +47,7 @@ public abstract class AbstractJDBCOutputFormat<T> extends RichOutputFormat<T> {
 	private final String username;
 	private final String password;
 	private final String drivername;
-	protected final String dbURL;
+	protected String dbURL;
 
 	protected transient Connection connection;
 
